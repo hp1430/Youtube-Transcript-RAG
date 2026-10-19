@@ -1,7 +1,15 @@
 from fastapi import FastAPI
+from dotenv import load_dotenv
 
-app = FastAPI()
+from app.configs.settings import get_settings
 
+load_dotenv()
+
+settings = get_settings()
+
+app = FastAPI(
+    title = settings.app_name
+)
 
 @app.get("/")
 def hello() -> dict[str, str]:
