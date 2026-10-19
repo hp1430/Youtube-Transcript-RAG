@@ -8,6 +8,9 @@ from qdrant_client.models import VectorParams, Distance
 
 from app.configs.settings import get_settings
 from app.services.embedding_service import get_embeddings
+from app.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 EMBEDDING_DIMENSIONS = 1536
 
@@ -15,6 +18,7 @@ EMBEDDING_DIMENSIONS = 1536
 def get_qdrant_client() -> QdrantClient:
     """Get the Qdrant client for the application."""
     settings = get_settings()
+    logger.info(f"Initializing Qdrant client with URL: {settings.qdrant_url}")
     return QdrantClient(
         url = settings.qdrant_url,
     )
@@ -27,6 +31,8 @@ class VectorStoreRepository:
         self.collection_name = collection_name or settings.collection_name
         self.client = get_qdrant_client()
         self._vector_store: QdrantVectorStore | None = None
+
+        logger.info(f"Initialized VectorStoreRepository for collection: {self.collection_name}")
 
     @property
     def vector_store(self) -> QdrantVectorStore:
@@ -43,7 +49,7 @@ class VectorStoreRepository:
         try:
             _info = self.client.get_collection(self.collection_name)
         except UnexpectedException:
-            print(f"Collection {self.collection_name} not found. Creating...")
+            logger.info(f"Collection {self.collection_name} not found. Creating...")
             self.client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config=VectorParams(
@@ -58,6 +64,7 @@ class VectorStoreRepository:
 
         ids = [str(uuid.uuid4()) for _ in documents]
         self.vector_store.add_documents(documents, ids = ids)
+        logger.info(f"Added {len(documents)} documents to collection {self.collection_name}")
         return ids
 
     def delete_collection(self) -> None:
@@ -76,6 +83,7 @@ class VectorStoreRepository:
     def health_check(self) -> bool:
         try:
             self.client.get_collection(self.collection_name)
+            logger.info(f"Health check passed for collection {self.collection_name}")
             return True
         except Exception as e:
             print(f"Health check failed: {e}")
