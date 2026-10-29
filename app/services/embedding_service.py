@@ -12,6 +12,5 @@ def get_embeddings() -> OpenAIEmbeddings:
     settings = get_settings()
     logger.info(f"Initializing OpenAI embeddings with model: {settings.embedding_model}")
     return OpenAIEmbeddings(
-        model = settings.embedding_model,
-        openai_api_type = settings.openai_api_key
+        model = settings.embedding_model
     )

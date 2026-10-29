@@ -42,7 +42,7 @@ class DocumentService:
             if not reader.fieldnames:
                 return False
             fields = set[str](reader.fieldnames)
-            return self.TRANSCRIPT_CSV_FIELDNAMES.issubset(fields) and len(fields) == len(self.TRANSCRIPT_CSV_FIELDNAMES)
+            return self.TRANSCRIPT_CSV_FIELDNAMES.issubset(fields)
 
     def load_transcript_csv(self, file_path: Path, source_name: str | None = None) -> list[Document]:
         """Load a transcript csv file into a list of documents."""

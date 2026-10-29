@@ -1,9 +1,9 @@
-from doctest import UnexpectedException
 from functools import lru_cache
 import uuid
 from langchain_core.documents import Document
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
+from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.models import VectorParams, Distance
 
 from app.configs.settings import get_settings
@@ -48,7 +48,7 @@ class VectorStoreRepository:
     def _ensure_collection(self) -> None:
         try:
             _info = self.client.get_collection(self.collection_name)
-        except UnexpectedException:
+        except UnexpectedResponse:
             logger.info(f"Collection {self.collection_name} not found. Creating...")
             self.client.create_collection(
                 collection_name=self.collection_name,
@@ -62,8 +62,9 @@ class VectorStoreRepository:
         if not documents:
             return []
 
+        self._ensure_collection()
         ids = [str(uuid.uuid4()) for _ in documents]
-        self.vector_store.add_documents(documents, ids = ids)
+        self.vector_store.add_documents(documents, ids=ids)
         logger.info(f"Added {len(documents)} documents to collection {self.collection_name}")
         return ids
 
