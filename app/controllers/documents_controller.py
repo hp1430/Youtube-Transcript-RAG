@@ -8,7 +8,7 @@ from app.utils import get_logger
 
 logger = get_logger(__name__)
 
-router = APIRouter(prefix="/docuemtns", tags=["documents"])
+router = APIRouter(prefix="/documents", tags=["documents"])
 
 @router.post(
     "/upload",
