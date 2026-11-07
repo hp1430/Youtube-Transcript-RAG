@@ -1,9 +1,10 @@
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.configs.settings import get_settings
-from app.schemas.api import DocumentBatchUploadresponse
+from app.schemas.api import AsyncIngestionStartedResponse, DocumentBatchUploadresponse, IngestionStatusResponse
 from app.services.ingestion_service import IngestionService
 from app.utils import get_logger
+from app.utils.temporal_helpers import use_temporal
 
 
 logger = get_logger(__name__)
@@ -50,6 +51,20 @@ async def upload_documents(
             )
 
         file_pairs.append((file.filename, content))
+
+        if use_temporal():
+            from app.services.temporal_ingestion_service import TemporalIngestionService
+            temporal_service = TemporalIngestionService()
+
+            try:
+                result = await temporal_service.start_batch_ingestion(file_pairs)
+            except Exception as e:
+                logger.error(f"Error starting batch ingestion workflow: {e}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=str(e)
+                )
+            return AsyncIngestionStartedResponse(**result)
 
     service = IngestionService()
 
