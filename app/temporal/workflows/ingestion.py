@@ -24,7 +24,7 @@ class BatchIngestProgress:
     file_results: list[dict[str, Any]] = field(default_factory=list)
 
 @workflow.defn(name="batch-ingest-workflow")
-class BatchIngestWorkflow:
+class BatchIngestionWorkflow:
     """Workflow to ingest a batch of files into the vector store."""
 
     def __init__(self) -> None:
