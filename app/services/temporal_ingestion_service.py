@@ -36,7 +36,7 @@ class TemporalIngestionService:
         return {
             "message": "Batch ingestion workflow started successfully.",
             "workflow_id": handle.id,
-            "run_id": handle.run_id,
+            "run_id": handle.result_run_id,
             "batch_id": batch_id,
             "files_total": len(files),
             "filenames": [file.filename for file in files],
