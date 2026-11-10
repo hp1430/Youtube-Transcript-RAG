@@ -11,6 +11,7 @@ from app.temporal.workflows.ingestion import (
     chunk_documents_activity,
     index_documents_activity,
     parse_documents_activity,
+    ingest_file_activity
 )
 
 logger = get_logger(__name__)
@@ -27,7 +28,8 @@ async def main() -> None:
         activities=[
             parse_documents_activity,
             chunk_documents_activity,
-            index_documents_activity
+            index_documents_activity,
+            ingest_file_activity
         ]
     )
 

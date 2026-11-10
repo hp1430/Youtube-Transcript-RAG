@@ -4,7 +4,7 @@ from typing import Any
 from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
-    from app.temporal.activities.activities import parse_documents_activity, chunk_documents_activity, index_documents_activity
+    from app.temporal.activities.activities import parse_documents_activity, chunk_documents_activity, index_documents_activity, ingest_file_activity
     from datetime import timedelta
 
 
@@ -42,31 +42,38 @@ class BatchIngestionWorkflow:
         self.progress.files_total = len(files)
         self.progress.status = "RUNNING"
 
-        for file_input in files:
+        for file_input in files:    #if we are processing everything as one activity, then we can do parallel processing also
             self.progress.current_filename = file_input.filename
-            doc_dicts = await workflow.execute_activity(
-                parse_documents_activity,
-                args=[file_input.local_path, file_input.filename],
-                start_to_close_timeout=timedelta(minutes=30),
+            # doc_dicts = await workflow.execute_activity(
+            #     parse_documents_activity,
+            #     args=[file_input.local_path, file_input.filename],
+            #     start_to_close_timeout=timedelta(minutes=30),
+            # )
+
+            # chunk_dicts = await workflow.execute_activity(
+            #     chunk_documents_activity,
+            #     args=[doc_dicts],
+            #     start_to_close_timeout=timedelta(minutes=30),
+            # )
+
+            # indexed = 0
+
+            # for start in range(0, len(chunk_dicts), batch_size):
+            #     batch = chunk_dicts[start: start + batch_size]
+            #     count = await workflow.execute_activity(
+            #         index_documents_activity,
+            #         args=[batch],
+            #         start_to_close_timeout=timedelta(minutes=30),
+            #         heartbeat_timeout=timedelta(minutes=5),
+            #     )
+            #     indexed += count
+
+            indexed = await workflow.execute_activity(
+                ingest_file_activity,
+                args=[file_input.local_path, file_input.filename, batch_size],
+                start_to_close_timeout=timedelta(minutes=60),
+                heartbeat_timeout=timedelta(minutes=5)
             )
-
-            chunk_dicts = await workflow.execute_activity(
-                chunk_documents_activity,
-                args=[doc_dicts],
-                start_to_close_timeout=timedelta(minutes=30),
-            )
-
-            indexed = 0
-
-            for start in range(0, len(chunk_dicts), batch_size):
-                batch = chunk_dicts[start: start + batch_size]
-                count = await workflow.execute_activity(
-                    index_documents_activity,
-                    args=[batch],
-                    start_to_close_timeout=timedelta(minutes=30),
-                    heartbeat_timeout=timedelta(minutes=5),
-                )
-                indexed += count
 
             self.progress.files_completed += 1
             self.progress.file_results.append({

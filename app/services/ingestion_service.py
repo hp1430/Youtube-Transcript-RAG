@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from pathlib import Path
 import uuid
 
@@ -31,13 +32,36 @@ class IngestionService:
 
         return batch_id, paths
 
-    def ingest_file_at_path(self, file_path: Path, source_name: str | None = None) -> dict:
+    def ingest_file_at_path(
+            self, 
+            file_path: Path, 
+            source_name: str | None = None,
+            *,
+            index_batch_size: int | None = None,
+            on_index_batch: Callable[[int, int], None] | None = None
+        ) -> dict:
         name = source_name or file_path.name
         chunks = self.document_service.process_file(file_path, source_name=name)
         if not chunks:
             return {"filename": name, "chunks_created": 0, "document_ids": []}
 
-        ids = self.vector_store_repository.add_documents(chunks)
+        # ids = self.vector_store_repository.add_documents(chunks)
+        # return {
+        #     "filename": name,
+        #     "chunks_created": len(chunks),
+        #     "document_ids": ids
+        # }
+
+        batch_size = index_batch_size or self.settings.index_batch_size
+
+        ids: list[str] = []
+
+        for start in range(0, len(chunks), batch_size):
+            batch = chunks[start : start + batch_size]  # take the next batch_size chunks
+            ids.extend(self.vector_store_repository.add_documents(batch))
+            if on_index_batch:
+                on_index_batch(min(start + len(batch), len(chunks)), len(chunks))
+
         return {
             "filename": name,
             "chunks_created": len(chunks),

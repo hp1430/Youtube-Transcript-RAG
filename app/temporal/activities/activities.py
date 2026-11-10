@@ -4,8 +4,10 @@ from docx import document
 from langchain_core.documents import Document
 from temporalio import activity, service
 
+from app.configs.settings import get_settings
 from app.repositories.vector_store_repository import VectorStoreRepository
 from app.services.document_service import DocumentService
+from app.services.ingestion_service import IngestionService
 from app.utils import get_logger
 
 logger = get_logger(__name__)
@@ -20,6 +22,30 @@ def _to_dicts(documents: list[Document]) -> list[dict]:
 
 def _from_dict(payload: list[dict]) -> list[Document]:
     return [Document(page_content=doc["page_content"], metadata=doc["metadata"]) for doc in payload]
+
+@activity.defn(name="ingest_file_activity")
+async def ingest_file_activity(
+    local_path: str,
+    filename: str,
+    batch_size: int | None = None
+) -> int:
+    settings = get_settings()
+
+    batch_size = batch_size or settings.index_batch_size
+
+    activity.logger.info(f"Ingesting file {filename} from {local_path} with batch size {batch_size}")
+
+    def _heartbeat(indexed: int, total: int) -> None:
+        activity.heartbeat(f"Indexed {indexed} of {total} chunks")
+
+    result = IngestionService().ingest_file_at_path(
+        Path(local_path),
+        source_name=filename,
+        index_batch_size=batch_size,
+        on_index_batch=_heartbeat
+    )
+
+    return result["chunks_created"]
 
 @activity.defn(name="parse_documents_activity")
 async def parse_documents_activity(local_path: str, filename: str) -> list[dict]:
