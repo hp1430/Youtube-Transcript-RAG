@@ -4,7 +4,15 @@ from typing import Any
 from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
-    from app.temporal.activities.activities import parse_documents_activity, chunk_documents_activity, index_documents_activity, ingest_file_activity
+    from app.temporal.activities.activities import (
+        parse_documents_activity, 
+        chunk_documents_activity, 
+        index_documents_activity, 
+        ingest_file_activity,
+        parse_documents_to_jsonl_activity,
+        chunk_documents_from_jsonl_activity,
+        index_documents_from_jsonl_activity
+    )
     from datetime import timedelta
 
 
@@ -68,19 +76,47 @@ class BatchIngestionWorkflow:
             #     )
             #     indexed += count
 
-            indexed = await workflow.execute_activity(
-                ingest_file_activity,
-                args=[file_input.local_path, file_input.filename, batch_size],
-                start_to_close_timeout=timedelta(minutes=60),
-                heartbeat_timeout=timedelta(minutes=5)
-            )
 
-            self.progress.files_completed += 1
-            self.progress.file_results.append({
-                "filename": file_input.filename,
-                "chunks_indexed": indexed,
-                "document_ids": []
-            })
+
+            # indexed = await workflow.execute_activity(
+            #     ingest_file_activity,
+            #     args=[file_input.local_path, file_input.filename, batch_size],
+            #     start_to_close_timeout=timedelta(minutes=60),
+            #     heartbeat_timeout=timedelta(minutes=5)
+            # )
+
+            # self.progress.files_completed += 1
+            # self.progress.file_results.append({
+            #     "filename": file_input.filename,
+            #     "chunks_indexed": indexed,
+            #     "document_ids": []
+            # })
+
+            parsed = await workflow.execute_activity(
+                         parse_documents_to_jsonl_activity,
+                        args=[file_input.local_path, file_input.filename],
+                        start_to_close_timeout=timedelta(minutes=30),
+                    )
+            
+            chunks= await workflow.execute_activity(
+                        chunk_documents_from_jsonl_activity,
+                        args=[parsed["write_path"], file_input.filename],
+                        start_to_close_timeout=timedelta(minutes=30)
+                    )
+            
+            chunks_count = chunks["chunks_count"]
+            chunks_path = chunks["chunks_path"]
+
+            indexed = 0
+
+            for start in range(0, chunks_count, batch_size):
+                count = await workflow.execute_activity(
+                    index_documents_from_jsonl_activity,
+                    args=[chunks_path, start, batch_size],
+                    start_to_close_timeout=timedelta(minutes=30),
+                    heartbeat_timeout=timedelta(minutes=5)
+                )
+                indexed += count
 
         self.progress.status = "COMPLETED"
         self.progress.current_filename = None
