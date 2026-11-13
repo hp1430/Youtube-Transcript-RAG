@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from dotenv import load_dotenv
 
 from app.configs.settings import get_settings
-from app.controllers import health_controller, documents_controller
+from app.controllers import health_controller, documents_controller, query_controller
 
 load_dotenv()
 
@@ -14,6 +14,7 @@ app = FastAPI(
 
 app.include_router(health_controller.router)
 app.include_router(documents_controller.router)
+app.include_router(query_controller.router)
 
 @app.get("/")
 def hello() -> dict[str, str]:

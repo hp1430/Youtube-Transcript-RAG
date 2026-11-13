@@ -46,3 +46,23 @@ class IngestionStatusResponse(BaseModel):
     files_completed: int = Field(..., description="The number of files that have been completed.")
     current_filename: str | None = Field(..., description="The filename of the file that is currently being processed.")
     file_results: list[dict] = Field(..., description="The results of the files that have been processed.")
+
+class SourceDocument(BaseModel):
+    """A source document."""
+    content: str = Field(..., description="The content of the document.")
+    metadata: dict = Field(..., description="The metadata of the document.")
+
+class QueryRequest(BaseModel):
+    """Request for the query endpoint."""
+    question: str = Field(..., description="The question that was asked.")
+    include_sources: bool = Field(..., description="Whether to include the source in the response.")
+
+class QueryResponse(BaseModel):
+    """Response for the query endpoint."""
+    question: str = Field(..., description="The question that was asked.")
+    answer: str = Field(..., description="The answer to the query.")
+    source: list[SourceDocument] | None = Field(
+        None,
+        description="Retrieved source chunks when include_sources is true; otherwise null.",
+    )
+    processing_time_ms: float = Field(..., description="The time it took to process the query.")

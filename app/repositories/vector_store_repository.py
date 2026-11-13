@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Any
 import uuid
 from langchain_core.documents import Document
 from langchain_qdrant import QdrantVectorStore
@@ -89,3 +90,8 @@ class VectorStoreRepository:
         except Exception as e:
             print(f"Health check failed: {e}")
             return False
+
+    def get_retriever(self, k: int | None = None) -> Any:
+        settings = get_settings()
+        k = k or settings.retrieval_k
+        return self.vector_store.as_retriever(search_kwargs={"k": k})
